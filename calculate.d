@@ -196,7 +196,7 @@ class EMA3 : Model!(2, Tuple!(real, "p", real, "sigmaStar"))
     /// sigma2, m
     real error(real[2] params, Tuple!(real, "p", real, "sigmaStar") d)
     {
-        return sigmaStarTheoretical(params, d.p).log2 - d.sigmaStar.log2;
+        return 1/sigmaStarTheoretical(params, d.p) - 1/d.sigmaStar;
     }
     immutable real sigma0, sigma1;
 }
