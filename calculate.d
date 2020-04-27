@@ -1,4 +1,4 @@
-import std.typecons : Tuple;
+import std.typecons;
 import std.exception, std.math;
 import std.conv : to;
 import std.algorithm, std.array, std.range, std.string;
@@ -28,28 +28,46 @@ void main(string[] args)
 
     immutable real sigma0 = data[0].sigmaStar, sigma1 = data[$-1].sigmaStar;
     data = data[1..$-1];
-    fitPredict(sigma0, sigma1, data);
+    auto results = [fitPredict(sigma0, sigma1, data)];
+    foreach (i; 0..data.length)
+        results ~= fitPredict(sigma0, sigma1, data[0..i] ~ data[i+1..$]);
+    "p".write;
+    foreach (result; results)
+    {
+        "\t(%e,%e)".writef(result.params[0], result.params[1]);
+    }
+    writeln;
+    foreach (i; 0..99)
+    {
+        "%f".writef(results[0].result[i].p);
+        foreach (result; results)
+        {
+            "\t%e".writef(result.result[i].sigmaStar);
+        }
+        writeln;
+    }
 }
 
 auto fitPredict(in real sigma0, in real sigma1, Data[] data)
 {
+    Data[] result;
     real[2] lowerBound = [sigma0*1.0001, 1],
             upperBound = [1e-2, 1000];
     auto searcher = Searcher!2(lowerBound, upperBound, 16, 16, 4);
     auto model = new EMA3(sigma0, sigma1);
     auto seachState = searcher.search(model, data);
     auto params = center(seachState.lowerBound, seachState.upperBound);
-    "p\tsigmastar(sigma2=%e,m=%e)".writefln(params[0], params[1]);
     foreach (i; 1..100)
     {
         immutable p = i / 100.0L;
         try
-            "%f\t%e".writefln(p, model.sigmaStarTheoretical(params, p));
+            result ~= Data(p, model.sigmaStarTheoretical(params, p));
         catch (Throwable t)
         {
             "%s".warningf(t);
         }
     }
+    return tuple!("params", "result")(params, result);
 }
 
 struct Searcher(size_t numParams)
