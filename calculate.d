@@ -181,6 +181,11 @@ class EMA3 : Model!(2, Tuple!(real, "p", real, "sigmaStar"))
 
 /// Solve equation axx+bx+c=0; 0<x
 real positiveSolution(in real a, in real b, in real c)
+out (result)
+{
+    assert (0 < result, "2de(%f, %e, %e) = %e".format(a, b, c, result));
+}
+do
 {
     if (a < 0)
         return positiveSolution(-a, -b, -c);
