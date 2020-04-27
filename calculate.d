@@ -3,16 +3,15 @@ import std.exception, std.math;
 import std.conv : to;
 import std.algorithm, std.array, std.range, std.string;
 import std.container.binaryheap;
+import std.stdio;
 
 import std.experimental.logger;
+alias Data = Tuple!(real, "p", real, "sigmaStar");
 
 void main(string[] args)
 {
-    import std.stdio;
-
     string fileName = args[1];
     immutable pColumn = args[2].to!size_t, sigmaStarColumn = args[3].to!size_t;
-    alias Data = Tuple!(real, "p", real, "sigmaStar");
     Data[] data;
     bool notFirst;
     foreach (line; File(fileName).byLine)
@@ -29,6 +28,11 @@ void main(string[] args)
 
     immutable real sigma0 = data[0].sigmaStar, sigma1 = data[$-1].sigmaStar;
     data = data[1..$-1];
+    fitPredict(sigma0, sigma1, data);
+}
+
+auto fitPredict(in real sigma0, in real sigma1, Data[] data)
+{
     real[2] lowerBound = [sigma0*1.0001, 1],
             upperBound = [1e-2, 1000];
     auto searcher = Searcher!2(lowerBound, upperBound, 16, 16, 4);
