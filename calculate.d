@@ -4,14 +4,22 @@ import std.conv : to;
 import std.algorithm, std.array, std.range, std.string;
 import std.container.binaryheap;
 import std.stdio;
+import std.getopt;
 
 import std.experimental.logger;
 alias Data = Tuple!(real, "p", real, "sigmaStar");
 
 void main(string[] args)
 {
+    auto pColumn = size_t.max, sigmaStarColumn = size_t.max, rhoStarColumn = size_t.max;
+    auto gor = args.getopt("p", &pColumn, "sigma|s", &sigmaStarColumn, "rho|r", &rhoStarColumn);
+    if (gor.helpWanted)
+    {
+        "ema".defaultGetoptPrinter(gor.options);
+        return;
+    }
     string fileName = args[1];
-    immutable pColumn = args[2].to!size_t, sigmaStarColumn = args[3].to!size_t;
+
     Data[] data;
     bool notFirst;
     foreach (line; File(fileName).byLine)
@@ -19,15 +27,25 @@ void main(string[] args)
         auto buf = line.chomp.split("\t");
         if (!notFirst)
         {
-            "%s:%s".infof(buf[pColumn], buf[sigmaStarColumn]);
+            if (sigmaStarColumn != size_t.max)
+                "%s:%s".infof(buf[pColumn], buf[sigmaStarColumn]);
+            if (rhoStarColumn != size_t.max)
+                "%s:%s".infof(buf[pColumn], buf[rhoStarColumn]);
             notFirst = true;
             continue;
         }
-        data ~= Data(buf[pColumn].to!real, buf[sigmaStarColumn].to!real);
+        if (sigmaStarColumn != size_t.max)
+            data ~= Data(buf[pColumn].to!real, buf[sigmaStarColumn].to!real);
+        if (rhoStarColumn != size_t.max)
+            data ~= Data(buf[pColumn].to!real, 1/buf[rhoStarColumn].to!real);
     }
 
-    immutable real sigma0 = data[0].sigmaStar, sigma1 = data[$-1].sigmaStar;
-    data = data[1..$-1];
+    immutable
+        i0 = data.countUntil!(a => a.p == 0),
+        i1 = data.countUntil!(a => a.p == 1),
+        sigma0 = data[i0].sigmaStar,
+        sigma1 = data[i1].sigmaStar;
+    data = data.remove(i0.max(i1)).remove(i0.min(i1));
     auto results = [fitPredict(sigma0, sigma1, data)];
     foreach (i; 0..data.length)
         results ~= fitPredict(sigma0, sigma1, data[0..i] ~ data[i+1..$]);
@@ -42,7 +60,7 @@ void main(string[] args)
         "%f".writef(results[0].result[i].p);
         foreach (result; results)
         {
-            "\t%e".writef(result.result[i].sigmaStar);
+            "\t%e".writef(1/result.result[i].sigmaStar);
         }
         writeln;
     }
