@@ -60,7 +60,7 @@ void main(string[] args)
         "%f".writef(results[0].result[i].p);
         foreach (result; results)
         {
-            "\t%e".writef(1/result.result[i].sigmaStar);
+            "\t%e".writef(result.result[i].sigmaStar);
         }
         writeln;
     }
@@ -71,7 +71,7 @@ auto fitPredict(in real sigma0, in real sigma1, Data[] data)
     Data[] result;
     real[2] lowerBound = [sigma0*1.0001, 1],
             upperBound = [1e-2, 1000];
-    auto searcher = Searcher!2(lowerBound, upperBound, 16, 16, 4);
+    auto searcher = Searcher!2(lowerBound, upperBound, 32, 32, 8);
     auto model = new EMA3(sigma0, sigma1);
     auto seachState = searcher.search(model, data);
     auto params = center(seachState.lowerBound, seachState.upperBound);
@@ -214,7 +214,7 @@ class EMA3 : Model!(2, Tuple!(real, "p", real, "sigmaStar"))
     /// sigma2, m
     real error(real[2] params, Tuple!(real, "p", real, "sigmaStar") d)
     {
-        return 1/sigmaStarTheoretical(params, d.p) - 1/d.sigmaStar;
+        return sigmaStarTheoretical(params, d.p) - d.sigmaStar;
     }
     immutable real sigma0, sigma1;
 }
