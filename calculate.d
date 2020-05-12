@@ -69,10 +69,10 @@ void main(string[] args)
 auto fitPredict(in real sigma0, in real sigma1, Data[] data)
 {
     Data[] result;
-    real[2] lowerBound = [sigma0*1.0001, 1],
-            upperBound = [1e-2, 1000];
-    auto searcher = Searcher!2(lowerBound, upperBound, 32, 32, 8);
-    auto model = new EMA3(sigma0, sigma1);
+    real[3] lowerBound = [0.0001, 1, -9],
+            upperBound = [4, 1000, -7];
+    auto searcher = Searcher!3(lowerBound, upperBound, 16, 32, 8);
+    auto model = new EMA3P(sigma1);
     auto seachState = searcher.search(model, data);
     auto params = center(seachState.lowerBound, seachState.upperBound);
     foreach (i; 1..100)
@@ -217,6 +217,41 @@ class EMA3 : Model!(2, Tuple!(real, "p", real, "sigmaStar"))
         return sigmaStarTheoretical(params, d.p) - d.sigmaStar;
     }
     immutable real sigma0, sigma1;
+}
+
+class EMA3P : Model!(3, Data)
+{
+    this (in real sigma1=0)
+    {
+        this.sigma1 = sigma1;
+    }
+    real sigmaStarTheoretical(real[3] params, real p)
+    {
+        immutable
+            sigma0 = 10 ^^ params[2],
+            sigma2 = (10 ^^ params[0]) * sigma0,
+            m = params[1];
+        immutable
+            p0 = (1 - p) ^^ m,
+            p1 = p,
+            p2 = 1 - (p0 + p1),
+            q = p2 / p1;
+        immutable
+            sigmar = (1 - (1+q) ^^ (-2.0L/3)) * sigma2 +
+                     (1+q) ^^ (-1.0L/3) / (
+                        (1 / sigma1) + ((1+q) ^^ (1.0L/3) - 1) / sigma2);
+        return positiveSolution(
+                -2,
+                p0 * 3 * (sigma0 - sigmar) + (2*sigmar - sigma0),
+                sigma0 * sigmar
+            );
+    }
+    /// sigma2, m
+    real error(real[3] params, Tuple!(real, "p", real, "sigmaStar") d)
+    {
+        return sigmaStarTheoretical(params, d.p) - d.sigmaStar;
+    }
+    immutable real sigma1;
 }
 
 /// Solve equation axx+bx+c=0; 0<x
