@@ -52,7 +52,7 @@ void main(string[] args)
     "p".write;
     foreach (result; results)
     {
-        "\t(%e,%e)".writef(result.params[0], result.params[1]);
+        "\t(%(%e,%))".writef(result.params[]);
     }
     writeln;
     foreach (i; 0..99)
