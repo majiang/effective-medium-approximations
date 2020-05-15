@@ -52,7 +52,7 @@ void main(string[] args)
     "p".write;
     foreach (result; results)
     {
-        "\t(%(%e,%))".writef(result.params[]);
+        "\t(%(%e,%)):%e".writef(result.params[], result.error);
     }
     writeln;
     foreach (i; 0..99)
@@ -71,10 +71,10 @@ auto fitPredict(in real sigma0, in real sigma1, Data[] data)
     Data[] result;
     real[3] lowerBound = [0.0001, 1, -9],
             upperBound = [4, 1000, -7];
-    auto searcher = Searcher!3(lowerBound, upperBound, 16, 32, 8);
+    auto searcher = Searcher!3(lowerBound, upperBound, 16, 64, 8);
     auto model = new EMA3P(sigma1);
-    auto seachState = searcher.search(model, data);
-    auto params = center(seachState.lowerBound, seachState.upperBound);
+    auto searchState = searcher.search(model, data);
+    auto params = center(searchState.lowerBound, searchState.upperBound);
     foreach (i; 1..100)
     {
         immutable p = i / 100.0L;
@@ -85,7 +85,7 @@ auto fitPredict(in real sigma0, in real sigma1, Data[] data)
             "%s".warningf(t);
         }
     }
-    return tuple!("params", "result")(params, result);
+    return tuple!("params", "result", "error")(params, result, searchState.meanSquareError);
 }
 
 struct Searcher(size_t numParams)
